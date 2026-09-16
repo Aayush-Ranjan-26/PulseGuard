@@ -1,0 +1,370 @@
+{
+  "name": "Project 3_N8N Home Lab Health Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "id": "66bbf80b-bcbf-41c6-9aa2-ff2c68dc7f01",
+      "name": "Cron - Every 5 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1104,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-001",
+              "name": "services",
+              "value": "=[\n  { \"name\": \"Plex\", \"url\": \"https://watch.plex.tv/\" },\n  { \"name\": \"NAS\", \"url\": \"https://nas.com/\" },\n  { \"name\": \"Home Assistant\", \"url\": \"https://www.home-assistant.io/\" }\n]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "106bd12c-7f9f-4779-accd-a8a0240d1a31",
+      "name": "Define Services",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -880,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "services",
+        "options": {}
+      },
+      "id": "065bf332-9769-46b7-85e9-1d0d59fac0d4",
+      "name": "Split Services",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const service = $json;\nconst start = Date.now();\nlet statusCode = 0;\n\ntry {\n  const res = await this.helpers.httpRequest({\n    method: 'GET',\n    url: service.url,\n    timeout: 10000,\n    returnFullResponse: true,\n    ignoreHttpStatusErrors: true,\n  });\n  statusCode = res.statusCode;\n} catch (e) {\n  statusCode = 0; // timeout / DNS fail / connection refused\n}\n\nconst responseTimeMs = Date.now() - start;\n\nreturn [{\n  json: {\n    service_name: service.name,\n    status_code: statusCode,\n    response_time_ms: responseTimeMs,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "1cd76716-0251-4a28-9307-b965a3666c93",
+      "name": "Check Service (HTTP + Timing)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-001",
+              "leftValue": "={{ $json.status_code }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "cond-002",
+              "leftValue": "={{ $json.response_time_ms }}",
+              "rightValue": 2000,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "2c8b11fd-f93e-4ce4-b4d4-80f0198cc360",
+      "name": "IF Down or Slow",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -208,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL || 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN' }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"🚨 **ALERT:** {{ $json.service_name }} is DOWN or SLOW. Status: {{ $json.status_code }}. Response: {{ $json.response_time_ms }} ms. Time: {{ $json.timestamp }}\"\n}",
+        "options": {}
+      },
+      "id": "707fbd72-8a72-4a8d-8add-9182a8758b53",
+      "name": "Discord Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $('IF Down or Slow').item.json.timestamp }}",
+            "service_name": "={{ $('IF Down or Slow').item.json.service_name }}",
+            "status_code": "={{ $('IF Down or Slow').item.json.status_code }}",
+            "response_time_ms": "={{ $('IF Down or Slow').item.json.response_time_ms }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "service_name",
+              "displayName": "service_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status_code",
+              "displayName": "status_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "response_time_ms",
+              "displayName": "response_time_ms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0916f6f9-ead4-4f3a-893a-354286c849a4",
+      "name": "Log to Sheets (Alert)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $('IF Down or Slow').item.json.timestamp }}",
+            "service_name": "={{ $('IF Down or Slow').item.json.service_name }}",
+            "status_code": "={{ $('IF Down or Slow').item.json.status_code }}",
+            "response_time_ms": "={{ $('IF Down or Slow').item.json.response_time_ms }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "service_name",
+              "displayName": "service_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status_code",
+              "displayName": "status_code",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "response_time_ms",
+              "displayName": "response_time_ms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1719b037-2408-48d4-a109-7271ee5f85cc",
+      "name": "Log to Sheets (OK)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        16,
+        240
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cron - Every 5 Min": {
+      "main": [
+        [
+          {
+            "node": "Define Services",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Define Services": {
+      "main": [
+        [
+          {
+            "node": "Split Services",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Services": {
+      "main": [
+        [
+          {
+            "node": "Check Service (HTTP + Timing)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Service (HTTP + Timing)": {
+      "main": [
+        [
+          {
+            "node": "IF Down or Slow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Down or Slow": {
+      "main": [
+        [
+          {
+            "node": "Discord Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log to Sheets (OK)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord Alert": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheets (Alert)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodeGroups": [],
+  "id": "",
+  "tags": []
+}
