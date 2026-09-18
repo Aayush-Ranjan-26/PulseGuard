@@ -15,7 +15,7 @@
 
 **PulseGuard** is an enterprise-grade, fully automated infrastructure heartbeat and telemetry orchestration pipeline engineered within **n8n**. Designed to deliver relentless visibility over homelabs, web applications, microservices, and network endpoints, PulseGuard operates continuously in the background—evaluating response status codes, profiling round-trip latency, streaming structured operational logs to cloud telemetry sheets, and triggering high-priority incident notifications across modern messaging channels the instant an anomaly is detected! ⚡🌐
 
-### 🌟 Why PulseGuard?
+### 🌟 Why PulseGuard? ✨
 * 🚀 **Autonomous 24/7 Monitoring**: Executes deterministic cron triggers every 5 minutes with zero human intervention required.
 * ⏱️ **Precision Latency Profiling**: Captures millisecond-accurate HTTP round-trip timing (`response_time_ms`) alongside standard RFC status codes.
 * 🚨 **Intelligent Incident Triaging**: Instantly differentiates between operational uptime, network timeouts, DNS failures, and performance degradation (> 2000 ms).
