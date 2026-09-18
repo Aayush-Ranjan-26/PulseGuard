@@ -254,5 +254,5 @@ try {
 ---
 
 <p align="center">
-  <b>Built with ❤️ and engineered for resilient infrastructure observability. Keep your systems up & your data protected! 🎉🚀</b>
+  <b>Built with ❤️ and engineered for resilient infrastructure observability. Keep your systems up & your data protected! 🎉🚀✨</b>
 </p>
