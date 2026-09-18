@@ -188,7 +188,7 @@ Open the **Define Services** node. Customize the JSON array to include whatever 
 1. Launch your n8n instance.
 2. In the left navigation sidebar, click **Workflows**.
 3. In the top-right corner, click **Add Workflow** > **Import from File...**
-4. Select the [`N8N Lab Health Monitor.json`](./N8N%20Lab%20Health%20Monitor.json) file from this repository.
+4. Select the [`pulsegaurd.json`](./pulsegaurd.json) file from this repository. 📁
 
 ### Step 3: Connect Credentials & Placeholders 🔗
 1. Connect your **Google Sheets OAuth2 API** credential to both logging nodes.
